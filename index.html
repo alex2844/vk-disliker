@@ -1,0 +1,95 @@
+<pre></pre>
+<script src="https://www.qwedl.com/data/qad/qad.js"></script><script async>
+var $loop = [[]],
+	$type = [null, [
+		'post', 'getPosts'
+	], [
+		'photo', 'getPhotos'
+	], [
+		'video', 'getVideos'
+	]],
+	$captcha = {},
+	$count = 100;
+error = e => {
+	$loop[2] = $loop[0].length;
+	$loop[0] = $loop[0].map(clearTimeout).filter(Boolean);
+	if (e.error.error_code == 14) {
+		return $('pre').empty(($captcha.sig = e.error.captcha_sid)).add([
+			$('/div').$('Остановлено таймеров: '+$loop[2]),
+			$('/img').attr('src', e.error.captcha_img).on('load', () => {
+				if ($loop[1])
+					clearTimeout($loop[1]);
+				$loop[1] = setTimeout(() => {
+					if ($captcha.key = prompt('Ошибка. Сайт запрашивает каптчу'))
+						main();
+				}, 2500);
+			})
+		]);
+	}else if (e.error.error_code == 5)
+		return alert('Ошибка. Не верный токен');
+	else if (e.error.error_code == 6)
+		setTimeout(location.reload.bind(location), 1000);
+	else if (e.error.error_code == 100)
+		alert('Что-то вк тупит... Возможно в вк больше не осталось лайков.');
+	return $('pre').$(JSON.stringify(e, undefined, 4));
+}
+main = () => {
+	var json = $();
+	if (!json.token) {
+		prompt('Открой эту ссылку в новой вкладке', 'https://oauth.vk.com/authorize?'+$$.json({
+			client_id: 5437958,
+			redirect_uri: 'https://oauth.vk.com/blank.html',
+			scope: [
+				'friends', 'wall'
+			].join(),
+			display: 'mobile',
+			response_type: 'token'
+		}, true));
+		if (json.token = prompt('Сюда ссылка сгенерируемая на предыдущей странице'))
+			location.href += '?token='+json.token.split('access_token=')[1].split('&')[0];
+	}else{
+		var pp, params = {
+			access_token: json.token,
+			v: 5.80
+		}
+		if (!$type[$type[0]] && (!(!$type[0] && ($type[0] = prompt($type.slice(1).map((d, i) => [(i + 1), d[0]].join(': ')).join('\n'))) && $type[$type[0]] && ($type[$type[0]].length == 2))))
+			return;
+		$$.api('https://api.vk.com/method/fave.'+$type[$type[0]][1], Object.assign(params, {count: $count}), d => {
+			if (d.error)
+				return error(d);
+			$('pre').$([
+				'Всего лайков: '+((parseInt(d.response.count) == 1000) ? '1000+' :d.response.count),
+				'Вк выдал: '+d.response.items.length,
+				'Type: '+$type[$type[0]][0]
+			].join('<br />'));
+			console.log(d.response);
+			Promise.all(d.response.items.map((e, i) => (new Promise((resolve, reject) => {
+				$loop[0].push(setTimeout(() => {
+					var pp = {
+						type: $type[$type[0]][0],
+						owner_id: e.owner_id,
+						item_id: e.id
+					}
+					if ($captcha.key) {
+						pp.captcha_sid = $captcha.sig;
+						pp.captcha_key = $captcha.key;
+						$captcha = {}
+					}
+					$$.api('https://api.vk.com/method/likes.delete', Object.assign(params, pp), dd => {
+						(dd.error ? reject(dd) : (() => {
+							$('pre').$('+<br />DISLIKE: '+JSON.stringify(pp, undefined, 4));
+							window.scrollTo(0, document.body.scrollHeight);
+							resolve();
+						})());
+					});
+				}, (i*5333)));
+			})))).then(() => {
+				if ((parseInt(d.response.count) > 0) && (d.response.items.length > 0))
+					location.reload();
+				else if ((parseInt(d.response.count) > 0) && (d.response.items.length == 0))
+					setTimeout(() => main($count = $count*2), 1000);
+			}).catch(error);
+		});
+	}
+}
+</script>
